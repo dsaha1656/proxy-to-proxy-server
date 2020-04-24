@@ -15,8 +15,12 @@ const server = net.createServer((client) => {
     wClients.push(client);
     console.log("----------client connected-------")
     client.allowHalfOpen = true;
-    var node = tunnels[0];
-    node.pipe(client).pipe(node);
+    // console.log(tunnels);
+    if(tunnels.length>0){
+        var node = tunnels[0];
+        node.pipe(client).pipe(node);    
+    }
+    
 
 }).listen(config.proxyPort)
 
