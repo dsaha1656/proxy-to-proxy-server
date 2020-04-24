@@ -34,43 +34,27 @@ server.on('connection', (clientToProxySocket) => {
   sendMessageToAll('Client Connected To Proxy');
   // We need only the data once, the starting packet
   clientToProxySocket.once('data', (data) => {
-    // If you want to see the packet uncomment below
-    // console.log(data.toString());
 
     let isTLSConnection = data.toString().indexOf('CONNECT') !== -1;
-
-    // By Default port is 80
-    let serverPort = 80;
-    let serverAddress;
-    if (isTLSConnection) {
-      // Port changed if connection is TLS
-      serverPort = data.toString()
-                          .split('CONNECT ')[1].split(' ')[0].split(':')[1];;
-      serverAddress = data.toString()
-                          .split('CONNECT ')[1].split(' ')[0].split(':')[0];
-    } else {
-      serverAddress = data.toString().split('Host: ')[1].split('\r\n')[0];
-    }
+    let serverPort = 9000;
+    let serverAddress = "127.0.0.1";
+    
 
     console.log(serverAddress);
 
-    let proxyToServerSocket = net.createConnection({
+    let proxyToProxySocket = net.createConnection({
       host: serverAddress,
       port: serverPort
     }, () => {
-      sendMessageToAll('PROXY TO SERVER SET UP');
-      if (isTLSConnection) {
-        clientToProxySocket.write('HTTP/1.1 200 OK\r\n\n');
-      } else {
-        proxyToServerSocket.write(data);
-      }
 
-      clientToProxySocket.pipe(proxyToServerSocket);
-      proxyToServerSocket.pipe(clientToProxySocket);
+      // var tmpData = {'data':data};
+      proxyToProxySocket.write(data)
+      clientToProxySocket.pipe(proxyToProxySocket);
+      proxyToProxySocket.pipe(clientToProxySocket);
 
-      proxyToServerSocket.on('error', (err) => {
-        sendMessageToAll('PROXY TO SERVER ERROR');
-        sendMessageToAll(err);
+      proxyToProxySocket.on('error', (err) => {
+        console.log('PROXY TO PROXY ERROR');
+        console.log(err);
       });
       
     });
@@ -82,7 +66,7 @@ server.on('connection', (clientToProxySocket) => {
 });
 
 server.on('error', (err) => {
-  console.log('SERVER ERROR');
+  console.log('PROXY ERROR');
   console.log(err);
   // throw err;
 });
