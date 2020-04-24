@@ -70,20 +70,20 @@ server.on('connection', (clientToProxySocket) => {
 
       proxyToServerSocket.on('error', (err) => {
         sendMessageToAll('PROXY TO SERVER ERROR');
-        sendMessageToAll(err);
+        // sendMessageToAll(err);
       });
       
     });
     clientToProxySocket.on('error', err => {
       sendMessageToAll('CLIENT TO PROXY ERROR');
-      sendMessageToAll(err);
+      // sendMessageToAll(err);
     });
   });
 });
 
 server.on('error', (err) => {
   console.log('SERVER ERROR');
-  console.log(err);
+  // console.log(err);
   // throw err;
 });
 
