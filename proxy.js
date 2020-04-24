@@ -1,9 +1,37 @@
 const net = require('net');
 
 const server = net.createServer();
+//websocket for send data to client server
+const http = require('http');
+const WebSocketServer = require('websocket').server;
+const WSserver = http.createServer();
+var wsconnection = null;
+WSserver.listen(9898);
 
+const wServer = new WebSocketServer({
+    httpServer: WSserver
+});
+
+wServer.on('request', function(request) {
+    const connection = request.accept(null, request.origin);
+    connection.on('message', function(message) {
+      console.log('Received Message:', message.utf8Data);
+      connection.sendUTF('Hi this is WebSocket server!');
+    });
+    connection.on('close', function(reasonCode, description) {
+        console.log('Client has disconnected.');
+    });
+    wsconnection = connection;
+});
+
+var sendMessageToAll = (msg) => {
+  console.log(msg);
+  if(wsconnection)
+    wsconnection.sendUTF(msg);
+}
+//proxy server communication
 server.on('connection', (clientToProxySocket) => {
-  console.log('Client Connected To Proxy');
+  sendMessageToAll('Client Connected To Proxy');
   // We need only the data once, the starting packet
   clientToProxySocket.once('data', (data) => {
     // If you want to see the packet uncomment below
@@ -30,7 +58,7 @@ server.on('connection', (clientToProxySocket) => {
       host: serverAddress,
       port: serverPort
     }, () => {
-      console.log('PROXY TO SERVER SET UP');
+      sendMessageToAll('PROXY TO SERVER SET UP');
       if (isTLSConnection) {
         clientToProxySocket.write('HTTP/1.1 200 OK\r\n\n');
       } else {
@@ -41,14 +69,14 @@ server.on('connection', (clientToProxySocket) => {
       proxyToServerSocket.pipe(clientToProxySocket);
 
       proxyToServerSocket.on('error', (err) => {
-        console.log('PROXY TO SERVER ERROR');
-        console.log(err);
+        sendMessageToAll('PROXY TO SERVER ERROR');
+        sendMessageToAll(err);
       });
       
     });
     clientToProxySocket.on('error', err => {
-      console.log('CLIENT TO PROXY ERROR');
-      console.log(err);
+      sendMessageToAll('CLIENT TO PROXY ERROR');
+      sendMessageToAll(err);
     });
   });
 });
@@ -56,13 +84,13 @@ server.on('connection', (clientToProxySocket) => {
 server.on('error', (err) => {
   console.log('SERVER ERROR');
   console.log(err);
-  throw err;
+  // throw err;
 });
 
 server.on('close', () => {
   console.log('Client Disconnected');
 });
 
-server.listen(8124, () => {
-  console.log('Server runnig at http://localhost:' + 8124);
+server.listen(10000, () => {
+  console.log('Server runnig at http://localhost:' + 10000);
 });
