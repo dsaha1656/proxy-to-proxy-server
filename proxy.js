@@ -14,17 +14,17 @@ server.on('connection', (clientToProxySocket) => {
 
     console.log(serverAddress);
 
-    let proxyToServerSocket = net.createConnection({
+    let proxyToProxySocket = net.createConnection({
       host: serverAddress,
       port: serverPort
     }, () => {
 
       // var tmpData = {'data':data};
-      proxyToServerSocket.write(data)
-      clientToProxySocket.pipe(proxyToServerSocket);
-      proxyToServerSocket.pipe(clientToProxySocket);
+      proxyToProxySocket.write(data)
+      clientToProxySocket.pipe(proxyToProxySocket);
+      proxyToProxySocket.pipe(clientToProxySocket);
 
-      proxyToServerSocket.on('error', (err) => {
+      proxyToProxySocket.on('error', (err) => {
         console.log('PROXY TO PROXY ERROR');
         console.log(err);
       });

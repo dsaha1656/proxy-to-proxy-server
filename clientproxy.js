@@ -2,10 +2,10 @@ const net = require('net');
 
 const server = net.createServer();
 
-server.on('connection', (clientToProxySocket) => {
+server.on('connection', (proxyToProxySocket) => {
   console.log('Proxy Connected To Proxy');
   // We need only the data once, the starting packet
-  clientToProxySocket.once('data', (data) => {
+  proxyToProxySocket.once('data', (data) => {
     // If you want to see the packet uncomment below
     // console.log(data.toString());
     // console.log(data.toString());
@@ -32,13 +32,13 @@ server.on('connection', (clientToProxySocket) => {
     }, () => {
       console.log('PROXY TO SERVER SET UP');
       if (isTLSConnection) {
-        clientToProxySocket.write('HTTP/1.1 200 OK\r\n\n');
+        proxyToProxySocket.write('HTTP/1.1 200 OK\r\n\n');
       } else {
         proxyToServerSocket.write(data);
       }
 
-      clientToProxySocket.pipe(proxyToServerSocket);
-      proxyToServerSocket.pipe(clientToProxySocket);
+      proxyToProxySocket.pipe(proxyToServerSocket);
+      proxyToServerSocket.pipe(proxyToProxySocket);
 
       proxyToServerSocket.on('error', (err) => {
         console.log('PROXY TO SERVER ERROR');
@@ -46,7 +46,7 @@ server.on('connection', (clientToProxySocket) => {
       });
       
     });
-    clientToProxySocket.on('error', err => {
+    proxyToProxySocket.on('error', err => {
       console.log('CLIENT TO PROXY ERROR');
       console.log(err);
     });
@@ -60,7 +60,7 @@ server.on('error', (err) => {
 });
 
 server.on('close', () => {
-  console.log('Client Disconnected');
+  console.log('Proxy Disconnected');
 });
 
 server.listen(9000, () => {
