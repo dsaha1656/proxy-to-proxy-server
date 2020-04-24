@@ -6,9 +6,6 @@ server.on('connection', (proxyToProxySocket) => {
   console.log('Proxy Connected To Proxy');
   // We need only the data once, the starting packet
   proxyToProxySocket.once('data', (data) => {
-    // If you want to see the packet uncomment below
-    // console.log(data.toString());
-    // console.log(data.toString());
     let isTLSConnection = data.toString().indexOf('CONNECT') !== -1;
 
     // By Default port is 80

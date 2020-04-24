@@ -1,33 +1,9 @@
 const net = require('net');
 
 const server = net.createServer();
-//websocket for send data to client server
-const http = require('http');
-const WebSocketServer = require('websocket').server;
-const WSserver = http.createServer();
-var wsconnection = null;
-WSserver.listen(9898);
-
-const wServer = new WebSocketServer({
-    httpServer: WSserver
-});
-
-wServer.on('request', function(request) {
-    const connection = request.accept(null, request.origin);
-    connection.on('message', function(message) {
-      console.log('Received Message:', message.utf8Data);
-      connection.sendUTF('Hi this is WebSocket server!');
-    });
-    connection.on('close', function(reasonCode, description) {
-        console.log('Client has disconnected.');
-    });
-    wsconnection = connection;
-});
 
 var sendMessageToAll = (msg) => {
   console.log(msg);
-  if(wsconnection)
-    wsconnection.sendUTF(msg);
 }
 //proxy server communication
 server.on('connection', (clientToProxySocket) => {
