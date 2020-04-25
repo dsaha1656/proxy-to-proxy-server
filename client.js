@@ -1,16 +1,11 @@
 const net = require('net');
 
 const server = net.createServer();
-//websocket for send data to client server
 
-//proxy server communication
-server.on('connection', (clientToProxySocket) => {
-  console.log('Client Connected To Proxy');
+server.on('connection', (proxyToProxySocket) => {
+  console.log('Proxy Connected To Proxy');
   // We need only the data once, the starting packet
-  clientToProxySocket.once('data', (data) => {
-    // If you want to see the packet uncomment below
-    // console.log(data.toString());
-
+  proxyToProxySocket.once('data', (data) => {
     let isTLSConnection = data.toString().indexOf('CONNECT') !== -1;
 
     // By Default port is 80
@@ -34,37 +29,37 @@ server.on('connection', (clientToProxySocket) => {
     }, () => {
       console.log('PROXY TO SERVER SET UP');
       if (isTLSConnection) {
-        clientToProxySocket.write('HTTP/1.1 200 OK\r\n\n');
+        proxyToProxySocket.write('HTTP/1.1 200 OK\r\n\n');
       } else {
         proxyToServerSocket.write(data);
       }
 
-      clientToProxySocket.pipe(proxyToServerSocket);
-      proxyToServerSocket.pipe(clientToProxySocket);
+      proxyToProxySocket.pipe(proxyToServerSocket);
+      proxyToServerSocket.pipe(proxyToProxySocket);
 
       proxyToServerSocket.on('error', (err) => {
         console.log('PROXY TO SERVER ERROR');
-        // console.log(err);
+        console.log(err);
       });
       
     });
-    clientToProxySocket.on('error', err => {
+    proxyToProxySocket.on('error', err => {
       console.log('CLIENT TO PROXY ERROR');
-      // console.log(err);
+      console.log(err);
     });
   });
 });
 
 server.on('error', (err) => {
   console.log('SERVER ERROR');
-  // console.log(err);
+  console.log(err);
   // throw err;
 });
 
 server.on('close', () => {
-  console.log('Client Disconnected');
+  console.log('Proxy Disconnected');
 });
 
-server.listen(10000, () => {
-  console.log('Server runnig at http://localhost:' + 10000);
+server.listen(9000, () => {
+  console.log('Server runnig at http://localhost:' + 9000);
 });

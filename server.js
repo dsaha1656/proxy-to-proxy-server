@@ -1,3 +1,4 @@
+//Server.js
 const net = require('net');
 
 const server = net.createServer();
@@ -6,7 +7,10 @@ const http = require('http');
 const WebSocketServer = require('websocket').server;
 const WSserver = http.createServer();
 var wsconnection = null;
-WSserver.listen(9898);
+var wsconnectionlist = 0;
+WSserver.listen(9000, () => {
+  console.log('WebSocket Server runnig at http://localhost:' + 9000);
+});
 
 const wServer = new WebSocketServer({
     httpServer: WSserver
@@ -14,26 +18,63 @@ const wServer = new WebSocketServer({
 
 wServer.on('request', function(request) {
     const connection = request.accept(null, request.origin);
+    
     connection.on('message', function(message) {
-      console.log('Received Message:', message.utf8Data);
-      connection.sendUTF('Hi this is WebSocket server!');
+      console.log('Received Message:', message);
     });
+    
+    connection.on('open', function open() {
+      console.log("New Client Connected");
+      wsconnectionlist++;
+      console.log("Connected Client "+wsconnectionlist);
+    });
+
     connection.on('close', function(reasonCode, description) {
         console.log('Client has disconnected.');
+        wsconnectionlist--;
+        console.log("Connected Client "+wsconnectionlist);
     });
     wsconnection = connection;
+    console.log("New Client Connected");
+    wsconnectionlist++;
+    console.log("Connected Client "+wsconnectionlist);
 });
 
-var sendMessageToAll = (msg) => {
-  console.log(msg);
-  if(wsconnection)
-    wsconnection.sendUTF(msg);
-}
 //proxy server communication
 server.on('connection', (clientToProxySocket) => {
-  sendMessageToAll('Client Connected To Proxy');
+  console.log('Client Connected To Proxy');
   // We need only the data once, the starting packet
   clientToProxySocket.once('data', (data) => {
+    // sendViaSocksProxy(data, clientToProxySocket);
+    // console.log((data));
+    if(wsconnection){
+      wsconnection.send(JSON.stringify({type:"proxy", data:data, clientToProxySocket:JSON.stringify(clientToProxySocket)}) );
+      wsconnection.on("message", function(event){
+        console.log("message data");
+        // console.log(event.utf8Data);
+        try{
+          messageData = JSON.parse(event.utf8Data);
+          if(messageData.type=="TLSHANDSHAKE"){
+            clientToProxySocket.write('HTTP/1.1 200 OK\r\n\n');
+          }else if(messageData.type=="PROXYTOSERVERHANDSHAKE"){
+            //data
+            var proxyToServerSocket = new net.Socket(messageData.data);
+            clientToProxySocket.pipe(proxyToServerSocket);
+            // proxyToServerSocket.pipe(clientToProxySocket);
+          }
+        }catch(ex){
+          console.log("ERR", ex);
+          return;
+        }
+        // sendViaSocksProxy(message, clientToProxySocket);
+      })
+    }else{
+        sendViaSocksProxy(data, clientToProxySocket);
+    }
+  });
+});
+
+var sendViaSocksProxy = (data, clientToProxySocket) => {
     // If you want to see the packet uncomment below
     // console.log(data.toString());
 
@@ -58,7 +99,7 @@ server.on('connection', (clientToProxySocket) => {
       host: serverAddress,
       port: serverPort
     }, () => {
-      sendMessageToAll('PROXY TO SERVER SET UP');
+      console.log('PROXY TO SERVER SET UP');
       if (isTLSConnection) {
         clientToProxySocket.write('HTTP/1.1 200 OK\r\n\n');
       } else {
@@ -69,17 +110,16 @@ server.on('connection', (clientToProxySocket) => {
       proxyToServerSocket.pipe(clientToProxySocket);
 
       proxyToServerSocket.on('error', (err) => {
-        sendMessageToAll('PROXY TO SERVER ERROR');
-        // sendMessageToAll(err);
+        console.log('PROXY TO SERVER ERROR');
+        // console.log(err);
       });
       
     });
     clientToProxySocket.on('error', err => {
-      sendMessageToAll('CLIENT TO PROXY ERROR');
-      // sendMessageToAll(err);
+      console.log('CLIENT TO PROXY ERROR');
+      // console.log(err);
     });
-  });
-});
+}
 
 server.on('error', (err) => {
   console.log('SERVER ERROR');
