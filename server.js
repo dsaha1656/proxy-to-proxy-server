@@ -2,79 +2,38 @@
 const net = require('net');
 
 const server = net.createServer();
-//websocket for send data to client server
-const http = require('http');
-const WebSocketServer = require('websocket').server;
-const WSserver = http.createServer();
-var wsconnection = null;
-var wsconnectionlist = 0;
-WSserver.listen(9000, () => {
-  console.log('WebSocket Server runnig at http://localhost:' + 9000);
+const clientServer = net.createServer();
+let clientIsConneted = false;
+let proxyToClientConnection = null;
+clientServer.on('connection', (connection)=>{
+  console.log("client is Connected on proxy server");
+  clientIsConneted = true;
+  proxyToClientConnection = connection;
 });
 
-const wServer = new WebSocketServer({
-    httpServer: WSserver
-});
-
-wServer.on('request', function(request) {
-    const connection = request.accept(null, request.origin);
-    
-    connection.on('message', function(message) {
-      console.log('Received Message:', message);
-    });
-    
-    connection.on('open', function open() {
-      console.log("New Client Connected");
-      wsconnectionlist++;
-      console.log("Connected Client "+wsconnectionlist);
-    });
-
-    connection.on('close', function(reasonCode, description) {
-        console.log('Client has disconnected.');
-        wsconnectionlist--;
-        console.log("Connected Client "+wsconnectionlist);
-    });
-    wsconnection = connection;
-    console.log("New Client Connected");
-    wsconnectionlist++;
-    console.log("Connected Client "+wsconnectionlist);
-});
 
 //proxy server communication
-server.on('connection', (clientToProxySocket) => {
-  console.log('Client Connected To Proxy');
+server.on('connection', (browserToProxySocket) => {
+  console.log('Browser connection to Proxy');
+  // console.log(browserToProxySocket)
   // We need only the data once, the starting packet
-  clientToProxySocket.once('data', (data) => {
-    // sendViaSocksProxy(data, clientToProxySocket);
-    // console.log((data));
-    if(wsconnection){
-      wsconnection.send(JSON.stringify({type:"proxy", data:data, clientToProxySocket:JSON.stringify(clientToProxySocket)}) );
-      wsconnection.on("message", function(event){
-        console.log("message data");
-        // console.log(event.utf8Data);
-        try{
-          messageData = JSON.parse(event.utf8Data);
-          if(messageData.type=="TLSHANDSHAKE"){
-            clientToProxySocket.write('HTTP/1.1 200 OK\r\n\n');
-          }else if(messageData.type=="PROXYTOSERVERHANDSHAKE"){
-            //data
-            var proxyToServerSocket = new net.Socket(messageData.data);
-            clientToProxySocket.pipe(proxyToServerSocket);
-            // proxyToServerSocket.pipe(clientToProxySocket);
-          }
-        }catch(ex){
-          console.log("ERR", ex);
-          return;
-        }
-        // sendViaSocksProxy(message, clientToProxySocket);
-      })
+  browserToProxySocket.once('data', (data) => {
+    if(!clientIsConneted){
+      sendViaSocksProxy(data, browserToProxySocket);  
     }else{
-        sendViaSocksProxy(data, clientToProxySocket);
+
+      proxyToClientConnection.write(data);
+      // console.log(data.toString());
+      proxyToClientConnection.pipe(browserToProxySocket);
+      browserToProxySocket.pipe(proxyToClientConnection);
+
     }
+    
   });
 });
 
-var sendViaSocksProxy = (data, clientToProxySocket) => {
+
+var sendViaSocksProxy = (data, browserToProxySocket) => {
     // If you want to see the packet uncomment below
     // console.log(data.toString());
 
@@ -101,13 +60,13 @@ var sendViaSocksProxy = (data, clientToProxySocket) => {
     }, () => {
       console.log('PROXY TO SERVER SET UP');
       if (isTLSConnection) {
-        clientToProxySocket.write('HTTP/1.1 200 OK\r\n\n');
+        browserToProxySocket.write('HTTP/1.1 200 OK\r\n\n');
       } else {
         proxyToServerSocket.write(data);
       }
 
-      clientToProxySocket.pipe(proxyToServerSocket);
-      proxyToServerSocket.pipe(clientToProxySocket);
+      browserToProxySocket.pipe(proxyToServerSocket);
+      proxyToServerSocket.pipe(browserToProxySocket);
 
       proxyToServerSocket.on('error', (err) => {
         console.log('PROXY TO SERVER ERROR');
@@ -115,7 +74,7 @@ var sendViaSocksProxy = (data, clientToProxySocket) => {
       });
       
     });
-    clientToProxySocket.on('error', err => {
+    browserToProxySocket.on('error', err => {
       console.log('CLIENT TO PROXY ERROR');
       // console.log(err);
     });
@@ -129,8 +88,13 @@ server.on('error', (err) => {
 
 server.on('close', () => {
   console.log('Client Disconnected');
+  clientIsConneted = false;
+  proxyToClientConnection = null;
 });
 
 server.listen(10000, () => {
   console.log('Server runnig at http://localhost:' + 10000);
 });
+clientServer.listen(9000, ()=>{
+  console.log('Client Server runnig at http://localhost:' + 9000);
+})
