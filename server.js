@@ -5,6 +5,7 @@ const server = net.createServer();
 const clientServer = net.createServer();
 let clientIsConneted = false;
 let proxyToClientConnection = null;
+let browserConnection = null;
 clientServer.on('connection', (connection)=>{
   console.log("client is Connected on proxy server");
   clientIsConneted = true;
@@ -12,21 +13,37 @@ clientServer.on('connection', (connection)=>{
 });
 
 
+clientServer.on('data', (data)=>{
+  console.log("-------------------data from Client------------------")
+  console.log(data.toString());
+  browserConnection.pipe(proxyToClientConnection);
+  proxyToClientConnection.pipe(browserConnection);
+});
+
+clientServer.on('close', ()=>{
+  console.log("Client Disconnected")
+});
+
+
 //proxy server communication
 server.on('connection', (browserToProxySocket) => {
-  console.log('Browser connection to Proxy');
-  // console.log(browserToProxySocket)
+  console.log('Client Connected To Proxy');
   // We need only the data once, the starting packet
+
   browserToProxySocket.once('data', (data) => {
+    tmpdata = (data.toString());
+    tmpdata += "\rTYPE: SERVERTOCLIENT\r\r\n";
+    tmpdata = Buffer.from(tmpdata);
+    console.log(tmpdata.toString())
+    data=tmpdata;
     if(!clientIsConneted){
-      sendViaSocksProxy(data, browserToProxySocket);  
+      sendViaSocksProxy(data, browserToProxySocket);
+      browserConnection = browserToProxySocket;  
     }else{
-
+      
       proxyToClientConnection.write(data);
-      // console.log(data.toString());
-      proxyToClientConnection.pipe(browserToProxySocket);
-      browserToProxySocket.pipe(proxyToClientConnection);
-
+      // proxyToClientConnection.pipe(browserToProxySocket);
+      // browserToProxySocket.pipe(proxyToClientConnection);
     }
     
   });

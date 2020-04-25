@@ -1,6 +1,9 @@
 const net = require('net');
+const request = require('request');
+
 const proxyServerIp = "127.0.0.1";
 const proxyServerPort = 9000;
+
 let clientToProxy = net.Socket();
 
 clientToProxy.connect(
@@ -12,11 +15,28 @@ clientToProxy.connect(
     console.log('Client To proxy connection');
 });
 
-clientToProxy.on('data', (data)=> {
-    // //connecting to the server
+clientToProxy.on('data', (dataFromProxyServer)=>{
 
-    // console.log(data.toString())
-    let isTLSConnection = data.toString().indexOf('CONNECT') !== -1;
+    console.log("data from server");
+    // data = JSON.parse(dataFromProxyServer);
+    // console.log(data.con=="SERVERTOCLIENT");
+    // data = data.data;
+    // // console.log(data);
+
+    // data = new Buffer(data);
+    // data = new Buffer(data);
+    console.log(dataFromProxyServer.toString())
+    var proxiedConnection = (dataFromProxyServer.toString().split('TYPE: SERVERTOCLIENT').length>1);
+    console.log(proxiedConnection);
+    data = dataFromProxyServer;
+    // // data = JSON.stringify(data.data);
+    // // console.log(data)
+    // data = Buffer.(JSON.parse(data.data))
+    // console.log(data.data);
+    if(proxiedConnection){
+
+   let isTLSConnection = data.toString().indexOf('CONNECT') !== -1;
+
     // By Default port is 80
     let serverPort = 80;
     let serverAddress;
@@ -29,57 +49,36 @@ clientToProxy.on('data', (data)=> {
     } else {
       serverAddress = data.toString().split('Host: ')[1].split('\r\n')[0];
     }
-    console.log("tls=>",isTLSConnection);
-    console.log(serverAddress, serverPort);
 
-    let clientToServerSocket = net.Socket();
-    clientToServerSocket.connect({
+    console.log(serverAddress);
+
+    let clientToServerSocket = net.createConnection({
       host: serverAddress,
       port: serverPort
     }, () => {
+      console.log('PROXY TO SERVER SET UP');
       if (isTLSConnection) {
         clientToProxy.write('HTTP/1.1 200 OK\r\n\n');
-      } else {
+      } 
+      else {
         clientToServerSocket.write(data);
       }
-      clientToServerSocket.write(data);
-      clientToServerSocket.pipe(clientToProxy);
+
       clientToProxy.pipe(clientToServerSocket);
-    });
-    clientToServerSocket.on('data', (data)=>{
-      console.log(data);
-    })
+      clientToServerSocket.pipe(clientToProxy);
 
-    clientToServerSocket.on('end', (data)=>{
-      clientToServerSocket.end()
-    })
-    // let clientToServerSocket = net.createConnection({
-    //   host: serverAddress,
-    //   port: serverPort
-    // }, () => {
-    //   console.log('CLIENT TO SERVER SET UP');
-    //   if (isTLSConnection) {
-    //     clientToProxy.write('HTTP/1.1 200 OK\r\n\n');
-    //   } else {
-    //     clientToServerSocket.write(data);
-    //     console.log("data written")
-    //   }
-    //   // console.log(JSON.stringify(data));
-    //   // clientToProxy.pipe(clientToServerSocket);
-    //   // clientToServerSocket.pipe(clientToProxy);
+      clientToServerSocket.on('error', (err) => {
+        console.log('PROXY TO SERVER ERROR');
+        console.log(err);
+      });
       
-    // });
-    
-    // clientToServerSocket.on('close',()=>{
-    //   console.log("connection ended");
-    // })
-
-    clientToProxy.on('error', (err) => {
-      console.log('CLIENT TO SERVER ERROR');
-      console.log(err);
     });
+
+    }
 });
 
-
-
+clientToProxy.on('error', err => {
+  console.log('CLIENT TO PROXY ERROR');
+  console.log(err);
+});
 
