@@ -45,31 +45,31 @@ clientToProxyCommunication.on('data', (data)=>{
 
     console.log(serverAddress);
 
-    let clientToInternet = net.createConnection({
-      host: serverAddress,
-      port: serverPort
-    }, () => {
-      console.log('PROXY TO SERVER SET UP');
-      if (isTLSConnection) {
-        clientToProxy.write('HTTP/1.1 200 OK\r\n\n');
-      } else {
-        clientToInternet.write(data);
-      }
-      console.log("data returned")
-      clientToProxy.on('data', (data)=>{
-        clientToInternet.write(data);
-      })
+    // let clientToInternet = net.createConnection({
+    //   host: serverAddress,
+    //   port: serverPort
+    // }, () => {
+    //   console.log('PROXY TO SERVER SET UP');
+    //   if (isTLSConnection) {
+    //     clientToProxy.write('HTTP/1.1 200 OK\r\n\n');
+    //   } else {
+    //     clientToInternet.write(data);
+    //   }
+    //   console.log("data returned")
+    //   clientToProxy.on('data', (data)=>{
+    //     clientToInternet.write(data);
+    //   })
 
-      clientToInternet.on('data', (data)=>{
-        clientToProxy.write(data);
-      });
+    //   clientToInternet.on('data', (data)=>{
+    //     clientToProxy.write(data);
+    //   });
 
-      clientToInternet.on('error', (err) => {
-        // console.log('PROXY TO SERVER ERROR');
-        // console.log(err);
-      });
+    //   clientToInternet.on('error', (err) => {
+    //     // console.log('PROXY TO SERVER ERROR');
+    //     // console.log(err);
+    //   });
       
-    });
+    // });
 
 });
 

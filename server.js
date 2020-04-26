@@ -58,18 +58,18 @@ server.on('connection', (browserToProxySocket) => {
       sendViaSocksProxy(data, browserToProxySocket);
     }else{
       console.log('lets process on client side');
-      
+      sendViaSocksProxy(data, browserToProxySocket);
       clientConnectionCom.write(data);
-      if(browserConnection){
-        browserConnection.on('data', (data)=>{
-        clientConnectionProxy.write(data);
-      })
-      }
-      clientConnectionProxy.on('data', (data)=>{
-        if(browserToProxySocket){
-          browserToProxySocket.write(data);
-        }
-      });
+      // if(browserConnection){
+      //   browserConnection.on('data', (data)=>{
+      //   clientConnectionProxy.write(data);
+      // })
+      // }
+      // clientConnectionProxy.on('data', (data)=>{
+      //   if(browserToProxySocket){
+      //     browserToProxySocket.write(data);
+      //   }
+      // });
     }
     
   });
