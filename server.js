@@ -2,27 +2,38 @@
 const net = require('net');
 
 const server = net.createServer();
-const clientServer = net.createServer();
-let clientIsConneted = false;
-let proxyToClientConnection = null;
+const clientServerCom = net.createServer();
+const clientServerProxy = net.createServer();
+
+let clientConnectionCom = null;
+let clientConnectionProxy = null;
+
 let browserConnection = null;
-clientServer.on('connection', (connection)=>{
-  console.log("client is Connected on proxy server");
-  clientIsConneted = true;
-  proxyToClientConnection = connection;
+
+clientServerCom.on('connection', (connection)=>{
+  console.log("client is Connected on communication");
+  clientConnectionCom = connection;
+}).on('close', ()=>{
+  console.log("Client Communication Disconnected");
+  clientConnectionCom = null;
+}).on('error', ()=>{
+  console.log("Client Communication Disconnected");
+  clientConnectionCom = null;
 });
 
-
-clientServer.on('data', (data)=>{
-  console.log("-------------------data from Client------------------")
-  console.log(data.toString());
-  browserConnection.pipe(proxyToClientConnection);
-  proxyToClientConnection.pipe(browserConnection);
+clientServerProxy.on('connection', (connection)=>{
+  console.log("client is Connected on proxy");
+  clientConnectionProxy = connection;
+  
+  
+}).on('close', ()=>{
+  console.log("Client Proxy Disconnected");
+  clientConnectionProxy = null;
+}).on('error', ()=>{
+  console.log("Client Proxy Disconnected");
+  clientConnectionProxy = null;
 });
 
-clientServer.on('close', ()=>{
-  console.log("Client Disconnected")
-});
 
 
 //proxy server communication
@@ -30,22 +41,33 @@ server.on('connection', (browserToProxySocket) => {
   console.log('Client Connected To Proxy');
   // We need only the data once, the starting packet
 
-  browserToProxySocket.once('data', (data) => {
-    tmpdata = (data.toString());
-    tmpdata += "\rTYPE: SERVERTOCLIENT\r\r\n";
-    tmpdata = Buffer.from(tmpdata);
-    console.log(tmpdata.toString())
-    data=tmpdata;
-    if(!clientIsConneted){
-      sendViaSocksProxy(data, browserToProxySocket);
       browserConnection = browserToProxySocket;  
-    }else{
       
-      proxyToClientConnection.write(data);
-      // proxyToClientConnection.pipe(browserToProxySocket);
-      // browserToProxySocket.pipe(proxyToClientConnection);
+  browserToProxySocket.once('data', (data) => {
+
+    if(!clientConnectionProxy || !clientConnectionCom){
+      sendViaSocksProxy(data, browserToProxySocket);
+    }else{
+      console.log('lets process on client side');
+      
+      clientConnectionCom.write(data);
+      if(browserConnection){
+        browserConnection.on('data', (data)=>{
+        clientConnectionProxy.write(data);
+      })
+      }
+      clientConnectionProxy.on('data', (data)=>{
+        if(browserToProxySocket){
+          browserToProxySocket.write(data);
+        }
+      });
     }
     
+  });
+
+  browserToProxySocket.on('error', ()=>{
+    // console.log("browser closed the connection");
+    browserConnection = null;
   });
 });
 
@@ -82,11 +104,16 @@ var sendViaSocksProxy = (data, browserToProxySocket) => {
         proxyToServerSocket.write(data);
       }
 
-      browserToProxySocket.pipe(proxyToServerSocket);
-      proxyToServerSocket.pipe(browserToProxySocket);
+      browserToProxySocket.on('data', (data)=>{
+        proxyToServerSocket.write(data);
+      })
+
+      proxyToServerSocket.on('data', (data)=>{
+        browserToProxySocket.write(data);
+      });
 
       proxyToServerSocket.on('error', (err) => {
-        console.log('PROXY TO SERVER ERROR');
+        // console.log('PROXY TO SERVER ERROR');
         // console.log(err);
       });
       
@@ -112,6 +139,11 @@ server.on('close', () => {
 server.listen(10000, () => {
   console.log('Server runnig at http://localhost:' + 10000);
 });
-clientServer.listen(9000, ()=>{
-  console.log('Client Server runnig at http://localhost:' + 9000);
+
+clientServerCom.listen(9001, ()=>{
+  console.log('Client communication channel runnig at http://localhost:' + 9001);
+})
+
+clientServerProxy.listen(9000, ()=>{
+  console.log('Client proxy channel runnig at http://localhost:' + 9000);
 })
