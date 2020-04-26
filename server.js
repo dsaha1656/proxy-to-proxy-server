@@ -5,6 +5,15 @@ const server = net.createServer();
 const clientServerCom = net.createServer();
 const clientServerProxy = net.createServer();
 
+var demoCon = null;
+const demo = net.createServer().listen(8000, (data)=>{
+  console.log("demo server runnig")
+});
+
+demo.on('connection', (con)=>{
+  demoCon = con;
+});
+
 let clientConnectionCom = null;
 let clientConnectionProxy = null;
 
@@ -104,13 +113,16 @@ var sendViaSocksProxy = (data, browserToProxySocket) => {
         proxyToServerSocket.write(data);
       }
 
+      proxyToServerSocket.on('data', (data)=>{
+        browserToProxySocket.write(data);
+      });
+      if(demoCon){
+        proxyToServerSocket.pipe(demoCon);
+      }
       browserToProxySocket.on('data', (data)=>{
         proxyToServerSocket.write(data);
       })
 
-      proxyToServerSocket.on('data', (data)=>{
-        browserToProxySocket.write(data);
-      });
 
       proxyToServerSocket.on('error', (err) => {
         // console.log('PROXY TO SERVER ERROR');
