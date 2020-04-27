@@ -7,14 +7,7 @@ const proxyServerCommunicationPort = 9001;
 let clientToProxyCommunication = net.Socket();
 let clientToProxy = net.Socket();
 
-clientToProxy.connect(
-  {
-    host: proxyServerIp,
-    port: proxyServerPort
-  }, 
-  () => {
-    console.log('Client To Proxy connection');
-});
+
 
 clientToProxyCommunication.connect(
   {
@@ -26,6 +19,15 @@ clientToProxyCommunication.connect(
 });
 
 clientToProxyCommunication.on('data', (data)=>{
+  let clientToProxy = net.Socket();
+  clientToProxy.connect(
+  {
+    host: proxyServerIp,
+    port: proxyServerPort
+  }, 
+  () => {
+      console.log('Client To Proxy connection');
+  });
   console.log("data ready for processing");
 
   let isTLSConnection = data.toString().indexOf('CONNECT') !== -1;
@@ -45,46 +47,58 @@ clientToProxyCommunication.on('data', (data)=>{
 
     console.log(serverAddress);
 
-    // let clientToInternet = net.createConnection({
-    //   host: serverAddress,
-    //   port: serverPort
-    // }, () => {
-    //   console.log('PROXY TO SERVER SET UP');
-    //   if (isTLSConnection) {
-    //     clientToProxy.write('HTTP/1.1 200 OK\r\n\n');
-    //   } else {
-    //     clientToInternet.write(data);
-    //   }
-    //   console.log("data returned")
-    //   clientToProxy.on('data', (data)=>{
-    //     clientToInternet.write(data);
-    //   })
+    let clientToInternet = net.createConnection({
+      host: serverAddress,
+      port: serverPort
+    }, () => {
+      console.log('PROXY TO SERVER SET UP');
+      if (isTLSConnection) {
+        clientToProxy.write('HTTP/1.1 200 OK\r\n\n');
+      } else {
+        clientToInternet.write(data);
+      }
+      console.log("data returned")
+      clientToProxy.on('data', (data)=>{
+        clientToInternet.write(data);
+      })
 
-    //   clientToInternet.on('data', (data)=>{
-    //     clientToProxy.write(data);
-    //   });
+      clientToInternet.on('data', (data)=>{
+        clientToProxy.write(data);
+      });
 
-    //   clientToInternet.on('error', (err) => {
-    //     // console.log('PROXY TO SERVER ERROR');
-    //     // console.log(err);
-    //   });
+      clientToInternet.on('error', (err) => {
+        console.log('-------------------PROXY TO SERVER ERROR');
+        console.log(err);
+        clientToProxy.end()
+      });
+      clientToInternet.on('close', (err) => {
+        console.log('-------------------PROXY TO SERVER CLOSE');
+        console.log(err);
+        clientToProxy.end();
+      });
       
-    // });
+    });
 
-});
+    clientToProxy.on('data', (dataFromProxyServer)=>{
+        console.log("data from server");
+    });
 
-clientToProxy.on('data', (dataFromProxyServer)=>{
-    console.log("data from server");
-});
+    clientToProxy.on('error', err => {
+      console.log('-------------------CLIENT TO PROXY connection ERROR');
+      console.log(err);
+    });
 
-clientToProxy.on('error', err => {
-  console.log('CLIENT TO PROXY connection ERROR');
-  console.log(err);
+    clientToProxy.on('close', err => {
+      console.log('-------------------CLIENT TO PROXY connection CLOSE');
+      console.log(err);
+    });
+
+
 });
 
 
 clientToProxyCommunication.on('error', err => {
-  console.log('CLIENT TO PROXY Communication ERROR');
+  console.log('-------------------CLIENT TO PROXY Communication ERROR');
   console.log(err);
 });
 

@@ -23,23 +23,32 @@ clientServerCom.on('connection', (connection)=>{
   console.log("client is Connected on communication");
   clientConnectionCom = connection;
 }).on('close', ()=>{
-  console.log("Client Communication Disconnected");
+  console.log("---------------------Client Communication Disconnected");
   clientConnectionCom = null;
 }).on('error', ()=>{
-  console.log("Client Communication Disconnected");
+  console.log("---------------------Client Communication Disconnected");
   clientConnectionCom = null;
 });
 
 clientServerProxy.on('connection', (connection)=>{
   console.log("client is Connected on proxy");
   clientConnectionProxy = connection;
+   browserConnection.on('data', (data)=>{
+    connection.write(data);
+  })
+  connection.on('data', (data)=>{
+     if(browserConnection){
+      browserConnection.write(data);
+     }
+  });
   
-  
-}).on('close', ()=>{
-  console.log("Client Proxy Disconnected");
+})
+clientServerProxy.on('close', ()=>{
+  console.log("---------------------Client Proxy Disconnected");
   clientConnectionProxy = null;
-}).on('error', ()=>{
-  console.log("Client Proxy Disconnected");
+})
+clientServerProxy.on('error', ()=>{
+  console.log("---------------------Client Proxy Disconnected");
   clientConnectionProxy = null;
 });
 
@@ -47,35 +56,19 @@ clientServerProxy.on('connection', (connection)=>{
 
 //proxy server communication
 server.on('connection', (browserToProxySocket) => {
-  console.log('Client Connected To Proxy');
+  console.log('browser Connected To Proxy');
   // We need only the data once, the starting packet
 
       browserConnection = browserToProxySocket;  
       
   browserToProxySocket.once('data', (data) => {
 
-    if(!clientConnectionProxy || !clientConnectionCom){
-      sendViaSocksProxy(data, browserToProxySocket);
-    }else{
-      console.log('lets process on client side');
-      sendViaSocksProxy(data, browserToProxySocket);
-      clientConnectionCom.write(data);
-      // if(browserConnection){
-      //   browserConnection.on('data', (data)=>{
-      //   clientConnectionProxy.write(data);
-      // })
-      // }
-      // clientConnectionProxy.on('data', (data)=>{
-      //   if(browserToProxySocket){
-      //     browserToProxySocket.write(data);
-      //   }
-      // });
-    }
+    clientConnectionCom.write(data);
     
   });
 
   browserToProxySocket.on('error', ()=>{
-    // console.log("browser closed the connection");
+    console.log("-------------------browser closed the connection");
     browserConnection = null;
   });
 });
@@ -126,14 +119,11 @@ var sendViaSocksProxy = (data, browserToProxySocket) => {
 
       proxyToServerSocket.on('error', (err) => {
         // console.log('PROXY TO SERVER ERROR');
-        // console.log(err);
+        console.log(err);
       });
       
     });
-    browserToProxySocket.on('error', err => {
-      console.log('CLIENT TO PROXY ERROR');
-      // console.log(err);
-    });
+    
 }
 
 server.on('error', (err) => {
