@@ -1,0 +1,25 @@
+{
+  "name": "proxy-to-proxy-server",
+  "version": "1.0.0",
+  "description": "",
+  "main": "browser.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dsaha1656/proxy-to-proxy-server.git"
+  },
+  "author": "dsaha1656@gmail.com",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/dsaha1656/proxy-to-proxy-server/issues"
+  },
+  "homepage": "https://github.com/dsaha1656/proxy-to-proxy-server#readme",
+  "dependencies": {
+    "http": "^0.0.1-security",
+    "net": "^1.0.2",
+    "url": "^0.11.3"
+  }
+}
